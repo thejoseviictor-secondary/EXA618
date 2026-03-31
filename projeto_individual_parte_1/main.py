@@ -1,18 +1,22 @@
 # Crawler para coletar dados dos conteúdos adicionais (conhecidos como expansões ou DLCs (Downloadable Content))
 # dos jogos "American Truck Simulator" e "Euro Truck Simulator 2". Que são simuladores de caminhão.
-# Especificamente, os conteúdos que adicionam novas áreas aos mapas dos jogos.
 
-import urllib.request
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
+from datetime import date
+import urllib.request
 import json
 import csv
+
+# Coletando a data atual (ISO 8601):
+todays_date = date.today().isoformat()
 
 # Modelo de tabela para arquivo ".csv":
 output_data_template = [
     [
-        "Nome do Jogo", "Nome da Expansão", "Imagem de Capa", "Data de Lançamento",
-        "Preço Atual", "Qtd. de Avaliações", "Qualidade de Avaliações"
+        "Nome do Jogo", "Nome da Expansão", "Tipo de Expansão", "Imagem de Capa",
+        "Data de Lançamento", "Preço Atual", "Qtd. de Avaliações", "Qualidade de Avaliações",
+        "Data de Coleta dos Dados"
     ]
 ]
 
@@ -23,7 +27,7 @@ html_content_template = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comparador de Mapas para ATS e ETS2</title>
+    <title>Comparador de DLCs para ATS e ETS2</title>
     <style>
         body { font-family: Arial; }
         div { border: 1px solid #ccc; padding: 10px; margin: 10px; }
@@ -41,8 +45,17 @@ ats_name = "American Truck Simulator"
 ets2_name = "Euro Truck Simulator 2"
 
 # Sites onde os dados serão coletados:
-ats_steam_seed = "https://store.steampowered.com/dlc/270880/American_Truck_Simulator/list/43348/"
-ets2_steam_seed = "https://store.steampowered.com/dlc/227300/Euro_Truck_Simulator_2/list/43330/"
+# American Truck Simulator:
+ats_map_expansions_seed = "https://store.steampowered.com/dlc/270880/American_Truck_Simulator/list/43348/"
+ats_cargo_packs_seed = "https://store.steampowered.com/dlc/270880/American_Truck_Simulator/list/43349/"
+ats_tuning_packs_seed = "https://store.steampowered.com/dlc/270880/American_Truck_Simulator/list/43350/"
+ats_paint_themes_seed = "https://store.steampowered.com/dlc/270880/American_Truck_Simulator/list/43351/"
+# Euro Truck Simulator 2:
+ets2_map_expansions_seed = "https://store.steampowered.com/dlc/227300/Euro_Truck_Simulator_2/list/43330/"
+ets2_cargo_packs_seed = "https://store.steampowered.com/dlc/227300/Euro_Truck_Simulator_2/list/43331/"
+ets2_tuning_and_cabin_accesories_seed = "https://store.steampowered.com/dlc/227300/Euro_Truck_Simulator_2/list/43342/"
+ets2_trailer_packs_seed = "https://store.steampowered.com/dlc/227300/Euro_Truck_Simulator_2/list/43341/"
+ets2_paint_themes_seed = "https://store.steampowered.com/dlc/227300/Euro_Truck_Simulator_2/list/43333/"
 
 # Site raiz da "Steam" para acessar mais detalhes do conteúdo:
 steam_content_root_url = "https://store.steampowered.com/app/"
@@ -64,7 +77,7 @@ def collectSteamData(seed):
     return None # Não encontrou dados.
 
 # Função para formatar os dados para salvamento no ".csv" e ".html":
-def setOutputData(map_expansions_steam_data, game_name):
+def setOutputData(map_expansions_steam_data, game_name, type):
     csv_output_data = []
     html_content = ""
 
@@ -89,15 +102,17 @@ def setOutputData(map_expansions_steam_data, game_name):
         <a href={steam_url} target="_blank">
             <img src={header} style="width: 30%; height: auto;" alt="Clique para acessar">
         </a>
+        <p>Tipo de expansão: {type}</p>
         <p>Data de lançamento: {release_date}</p>
         <p>Preço atual: {current_price}</p>
         <p>Quantidade de avaliações: {num_reviews}</p>
         <p>Qualidade das avaliações: {label_reviews}</p>
+        <p>Data da coleta dos dados: {todays_date}</p>
     </div>
     <br>
 """
 
-            steam_data_output = [game_name, title, header, release_date, current_price, num_reviews, label_reviews]
+            steam_data_output = [game_name, title, type, header, release_date, current_price, num_reviews, label_reviews, todays_date]
             csv_output_data.append(steam_data_output)
     
     return csv_output_data, html_content
@@ -120,16 +135,60 @@ def writeDataToHTMLFile(html_output):
 
 if __name__ == "__main__":
     # Coletando os dados na "Steam":
-    ats_map_expansions_steam_data = collectSteamData(ats_steam_seed)
-    ets2_map_expansions_steam_data = collectSteamData(ets2_steam_seed)
+    # American Truck Simulator:
+    ats_map_expansions_steam_data = collectSteamData(ats_map_expansions_seed)
+    ats_cargo_packs_steam_data = collectSteamData(ats_cargo_packs_seed)
+    ats_tuning_packs_steam_data = collectSteamData(ats_tuning_packs_seed)
+    ats_paint_themes_steam_data = collectSteamData(ats_paint_themes_seed)
+    # Euro Truck Simulator 2:
+    ets2_map_expansions_steam_data = collectSteamData(ets2_map_expansions_seed)
+    ets2_cargo_packs_steam_data = collectSteamData(ets2_cargo_packs_seed)
+    ets2_tuning_and_cabin_accesories_steam_data = collectSteamData(ets2_tuning_and_cabin_accesories_seed)
+    ets2_trailer_packs_steam_data = collectSteamData(ets2_trailer_packs_seed)
+    ets2_paint_themes_steam_data = collectSteamData(ets2_paint_themes_seed)
+    
+    # Inicializando o ".csv" e ".html" de saída:
+    output_csv = output_data_template
+    output_html = html_content_template
 
     # Organizando os dados de saída:
-    ats_csv_output, ats_html_output = setOutputData(ats_map_expansions_steam_data, ats_name)
-    ets2_csv_output, ets2_html_output = setOutputData(ets2_map_expansions_steam_data, ets2_name)
+    # American Truck Simulator:
+    ats_map_expansions_csv_output, ats_map_expansions_html_output = setOutputData(ats_map_expansions_steam_data, ats_name, "Expansão de Mapa")
+    ats_cargo_packs_csv_output, ats_cargo_packs_html_output = setOutputData(ats_cargo_packs_steam_data, ats_name, "Pack de Cargas")
+    ats_tuning_packs_csv_output, ats_tuning_packs_html_output = setOutputData(ats_tuning_packs_steam_data, ats_name, "Pack de Tunagem")
+    ats_paint_themes_csv_output, ats_paint_themes_html_output = setOutputData(ats_paint_themes_steam_data, ats_name, "Temas de Pintura")
+    # Euro Truck Simulator 2:
+    ets2_map_expansions_csv_output, ets2_map_expansions_html_output = setOutputData(ets2_map_expansions_steam_data, ets2_name, "Expansão de Mapa")
+    ets2_cargo_packs_csv_output, ets2_cargo_packs_html_output = setOutputData(ets2_cargo_packs_steam_data, ets2_name, "Pack de Cargas")
+    ets2_tuning_and_cabin_accesories_csv_output, ets2_tuning_and_cabin_accesories_html_output = setOutputData(ets2_tuning_and_cabin_accesories_steam_data, ets2_name, "Tunagem e Acessórios de Cabine")
+    ets2_trailer_packs_csv_output, ets2_trailer_packs_html_output = setOutputData(ets2_trailer_packs_steam_data, ets2_name, "Pack de Trailers")
+    ets2_paint_themes_csv_output, ets2_paint_themes_html_output = setOutputData(ets2_paint_themes_steam_data, ets2_name, "Temas de Pintura")
 
-    # Concatenando as saídas para o ".csv" e ".html":
-    output_csv = output_data_template + ats_csv_output + ets2_csv_output
-    output_html = html_content_template + ats_html_output + ets2_html_output
+    # Somando as saídas para o ".csv" e ".html":
+    # CSV ------------------------------------------------------
+    # American Truck Simulator:
+    output_csv += ats_map_expansions_csv_output
+    output_csv += ats_cargo_packs_csv_output
+    output_csv += ats_tuning_packs_csv_output
+    output_csv += ats_paint_themes_csv_output
+    # Euro Truck Simulator 2:
+    output_csv += ets2_map_expansions_csv_output
+    output_csv += ets2_cargo_packs_csv_output
+    output_csv += ets2_tuning_and_cabin_accesories_csv_output
+    output_csv += ets2_trailer_packs_csv_output
+    output_csv += ets2_paint_themes_csv_output
+    # HTML -----------------------------------------------------
+    # American Truck Simulator:
+    output_html += ats_map_expansions_html_output
+    output_html += ats_cargo_packs_html_output
+    output_html += ats_tuning_packs_html_output
+    output_html += ats_paint_themes_html_output
+    # Euro Truck Simulator 2:
+    output_html += ets2_map_expansions_html_output
+    output_html += ets2_cargo_packs_html_output
+    output_html += ets2_tuning_and_cabin_accesories_html_output
+    output_html += ets2_trailer_packs_html_output
+    output_html += ets2_paint_themes_html_output
 
     # Escrevendo os dados nos arquivos ".csv" e ".html":
     writeDataToCSVFile(output_csv)
